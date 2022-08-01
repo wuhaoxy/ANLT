@@ -18,7 +18,7 @@ public class ANLT  extends InitTensor{
 	 
 	public void train() throws IOException 
 	{
-		long startTime = System.currentTimeMillis();   //记录开始训练时间
+		long startTime = System.currentTimeMillis();   
 		
 		FileWriter  fw = new FileWriter(new File(trainFile.replace(".txt", "_")+rank+"_"+eta+"_"
 				+lambda+"_"+new Date().getTime() / 1000+"_ANLT.txt"));
@@ -29,7 +29,7 @@ public class ANLT  extends InitTensor{
 		initAssistMatrix();
 		initSliceSet();
 		initLagAssit(); 
-		logNormalization();
+		logNormalization();   // data-dependent
 		
 		for(TensorTuple trainTuple: trainData)
 		{
