@@ -8,9 +8,15 @@ import java.util.Date;
 import LFTcommom.InitTensor;
 import LFTcommom.TensorTuple;
 
-
 public class ANLT  extends InitTensor{
-
+	
+	public double eta = 0;     
+	public double sumTime = 0; 
+	public int tr = 0;	
+	public int threshold = 0; 	
+	public boolean flagRMSE = true, flagMAE = true; 
+	
+	
 	ANLT(String trainFile, String testFile, String separator )
 	{
 		super(trainFile, testFile, separator); 
@@ -24,12 +30,18 @@ public class ANLT  extends InitTensor{
 				+lambda+"_"+new Date().getTime() / 1000+"_ANLT.txt"));
 		fw.write("round :: everyRoundRMSE :: everyRoundMAE :: costTime(ms) \n");
 		fw.flush();
-			
+		
+		
 		initFactorMatrix();
 		initAssistMatrix();
 		initSliceSet();
 		initLagAssit(); 
-		logNormalization();   // data-dependent
+		logNormalization();  //data-dependent
+		
+		System.out.println("maxAID maxBID maxCID "+maxAID+" "+maxBID+" "+maxCID);
+		System.out.println("minAID minBID minCID "+minAID+" "+minBID+" "+minCID);
+		System.out.println("trainCount testCount "+trainCount+" "+testCount);
+		System.out.println(" eta lambda "+eta+" "+lambda);
 		
 		for(TensorTuple trainTuple: trainData)
 		{
@@ -38,7 +50,7 @@ public class ANLT  extends InitTensor{
 		
 		for(int round = 1; round <= trainRound; round++)
 		{
-			long startRoundTime = System.currentTimeMillis();    
+			long startRoundTime = System.currentTimeMillis(); 
 			initAssistMatrix();
 			
 			double[] Temp1 = new double[maxAID+1];
@@ -67,7 +79,7 @@ public class ANLT  extends InitTensor{
 				{
 					double error = trainTuple.value - trainTuple.valueHat + Sp[trainTuple.aID][r] *
 							Dp[trainTuple.bID][r] * Tp[trainTuple.cID][r];
-									
+										
 					Spup[trainTuple.aID][r] += error * Dp[trainTuple.bID][r] * Tp[trainTuple.cID][r];
 					Spdown[trainTuple.aID][r] += Math.pow(Dp[trainTuple.bID][r] * Tp[trainTuple.cID][r], 2);
 					
@@ -81,8 +93,7 @@ public class ANLT  extends InitTensor{
 				for(int i = 1; i <= this.maxAID; i++)
 				{
 					Spup[i][r] += (alpha[i] * S[i][r] - M[i][r]);
-					Spdown[i][r] += alpha[i];
-					
+					Spdown[i][r] += alpha[i];					
 					Sp[i][r] = Spup[i][r] / Spdown[i][r];
 					
 					double temps = Sp[i][r] + M[i][r] / alpha[i];
@@ -94,7 +105,6 @@ public class ANLT  extends InitTensor{
 					{
 						S[i][r] = 0;
 					}
-					
 					M[i][r] += eta * alpha[i] * (Sp[i][r] - S[i][r]);  
 				}
 
@@ -102,7 +112,6 @@ public class ANLT  extends InitTensor{
 				{
 					Dpup[j][r] += (beta[j] * D[j][r] - N[j][r]);
 					Dpdown[j][r] += beta[j];
-					
 					Dp[j][r] = Dpup[j][r] / Dpdown[j][r];
 					
 					double tempd = Dp[j][r] + N[j][r] / beta[j];
@@ -121,8 +130,7 @@ public class ANLT  extends InitTensor{
 				for(int k = 1; k <= this.maxCID; k++)
 				{
 					Tpup[k][r] += (gamma[k] * T[k][r] - Z[k][r]);
-					Tpdown[k][r] += gamma[k];
-					
+					Tpdown[k][r] += gamma[k];			
 					Tp[k][r] = Tpup[k][r] / Tpdown[k][r];
 					
 					double tempt = Tp[k][r] + Z[k][r] / gamma[k];
@@ -148,6 +156,7 @@ public class ANLT  extends InitTensor{
 			}
 			
 			
+			
 			for (int max_a_id = 1; max_a_id <= maxAID; max_a_id++) 
 			{
 				Temp1[max_a_id] = ap[max_a_id];
@@ -167,7 +176,6 @@ public class ANLT  extends InitTensor{
 			for(TensorTuple trainTuple: trainData)
 			{			
 				double error =  trainTuple.value - trainTuple.valueHat + ap[trainTuple.aID];
-
 				apup[trainTuple.aID] += error;
 			}
 		
@@ -193,8 +201,7 @@ public class ANLT  extends InitTensor{
 			
 			
 			for(TensorTuple trainTuple: trainData)
-			{
-
+			{	
 				double error =  trainTuple.value - trainTuple.valueHat + bp[trainTuple.bID];
 				bpup[trainTuple.bID] += error;
 			}
@@ -222,7 +229,7 @@ public class ANLT  extends InitTensor{
 			
 			for(TensorTuple trainTuple: trainData)
 			{
-				double error =  trainTuple.value - trainTuple.valueHat + cp[trainTuple.cID];		
+				double error =  trainTuple.value - trainTuple.valueHat + cp[trainTuple.cID];
 				cpup[trainTuple.cID] += error;
 			}
 		
@@ -257,7 +264,7 @@ public class ANLT  extends InitTensor{
 
 			double square = 0, absCount = 0;
 			for (TensorTuple testTuple : testData) {
-				testTuple.valueHat = this.getPrediction(testTuple.aID, testTuple.bID, testTuple.cID);
+				testTuple.valueHat = this.getPredictionADMM(testTuple.aID, testTuple.bID, testTuple.cID);
 				square += Math.pow(testTuple.value - testTuple.valueHat, 2);
 				absCount += Math.abs(testTuple.value - testTuple.valueHat);
 			}
@@ -314,7 +321,7 @@ public class ANLT  extends InitTensor{
 		
 		long endTime = System.currentTimeMillis();
 
-		fw.write("Total Time Cost："+(endTime-startTime)/1000+"s\n");
+		fw.write("Total Time Cost:"+(endTime-startTime)/1000+"s\n");
 		fw.flush();
 		fw.write("minRMSE:"+minRMSE+"  minRSMERound "+minRMSERound+"\n");
 		fw.flush();
@@ -324,31 +331,32 @@ public class ANLT  extends InitTensor{
 		fw.flush();
 		fw.write("trainCount: "+trainCount+"   testCount: "+testCount+"\n");
 		fw.flush();
+		fw.write("maxAID maxBID maxCID "+maxAID+" "+maxBID+" "+maxCID+"\n");
+		fw.write("minAID minBID minCID "+minAID+" "+minBID+" "+minCID+"\n");
 		fw.close();
 
 		System.out.println("***********************************************");
 		System.out.println("rank: "+this.rank+"\n");
 		System.out.println("minRMSE:"+minRMSE+"  minRSMERound"+minRMSERound);
 		System.out.println("minMAE:"+minMAE+"  minMAERound"+minMAERound);
-		System.out.println("Total Time Cost："+(endTime-startTime)/1000+"s\n");	
 
 	}
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
+
 		
-		ANLT anlt = new ANLT("./result/trainingData.txt",
-				"./result/testingData.txt", "::");
-		
-		anlt.threshold = 50;
+		ANLT anlt = new ANLT("./trainingdata.txt", 
+				"./testingdata.txt","::");
+	
+		anlt.threshold = 10;
 		anlt.rank = 20;
-		anlt.trainRound = 500;
+		anlt.trainRound = 100;
 		anlt.errorgap = 1E-6;
 		
 		anlt.eta = 1;   //data-dependent
-		anlt.lambda = 2; //data-dependent 
-
-		
+		anlt.lambda =1;  //data-dependent
+					
 		try {
 			anlt.initData(anlt.trainFile, anlt.trainData, 0);
 			anlt.initData(anlt.testFile, anlt.testData, 1);
@@ -357,6 +365,6 @@ public class ANLT  extends InitTensor{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		
 	}
 }
