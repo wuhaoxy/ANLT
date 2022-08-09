@@ -342,7 +342,7 @@ public class InitTensor {
 
 	
 
-	public double getPrediction(int a_Id, int b_Id, int c_Id) {
+        public double getPredictionADMM(int a_Id, int b_Id, int c_Id) {
 		double p_valueHat = 0;
 		for (int r = 1; r <= this.rank; r++) {	
 			p_valueHat += S[a_Id][r] * D[b_Id][r] * T[c_Id][r];
@@ -353,4 +353,15 @@ public class InitTensor {
 		return p_valueHat;
 	}
 	
+		
+	public double getPrediction(int a_Id, int b_Id, int c_Id) {
+		double p_valueHat = 0;
+		for (int r = 1; r <= this.rank ; r++) {
+			p_valueHat += Sp[a_Id][r] * Dp[b_Id][r] * Tp[c_Id][r];
+		}	
+		
+		p_valueHat += (ap[a_Id] + bp[b_Id] + cp[c_Id]);
+		
+		return p_valueHat;
+	}
 }
